@@ -1,96 +1,142 @@
-import { Injectable, ForbiddenException } from '@nestjs/common';
+import { Injectable, ForbiddenException, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import OpenAI from 'openai';
 import { PrismaService } from '../common/prisma.service';
 import { GenerateDto } from './dto/generate.dto';
+import { GenerationContext, NsfwLevel, Platform, SupportedLanguage, UserPlan } from './agents/context';
+import {
+  initAgents,
+  runCaptionAgent,
+  runBioAgent,
+  runDMScriptAgent,
+  runContentIdeasAgent,
+  runHashtagAgent,
+} from './agents';
 
 const FREE_LIMIT = 10;
 
-const PROMPTS = {
-  CAPTION: (dto: GenerateDto) =>
-    `You are an expert copywriter for adult content creators on OnlyFans/Fansly.
-Create an engaging, seductive caption for a post. Keep it flirty and within platform guidelines.
-Creator niche: ${dto.niche || 'general'}
-Tone: ${dto.tone || 'flirty'}
-Context: ${dto.context}
-Generate 3 caption variations.`,
-
-  BIO: (dto: GenerateDto) =>
-    `Write a compelling profile bio for an adult content creator.
-Niche: ${dto.niche || 'general'}
-Personality: ${dto.tone || 'confident'}
-Key info: ${dto.context}
-Generate 2 bio options (under 150 chars each).`,
-
-  DM_SCRIPT: (dto: GenerateDto) =>
-    `Write a personalized DM script to convert a free follower to a paying subscriber.
-Creator niche: ${dto.niche || 'general'}
-Scenario: ${dto.context}
-Make it feel personal, not spammy. 3-5 sentences.`,
-
-  CONTENT_IDEAS: (dto: GenerateDto) =>
-    `Generate 10 content ideas for an adult creator.
-Niche: ${dto.niche || 'general'}
-Context: ${dto.context}
-Mix free teasers and premium content ideas. Be creative but within OnlyFans guidelines.`,
-
-  HASHTAGS: (dto: GenerateDto) =>
-    `Generate optimal hashtags for adult content.
-Platform: ${dto.context || 'Twitter/X'}
-Niche: ${dto.niche || 'general'}
-Return 20-30 relevant hashtags, ordered by relevance.`,
-};
+const GEN_TYPE_MAP = {
+  caption: 'CAPTION',
+  bio: 'BIO',
+  'dm-script': 'DM_SCRIPT',
+  'content-ideas': 'CONTENT_IDEAS',
+  hashtags: 'HASHTAGS',
+} as const;
 
 @Injectable()
-export class GenerationService {
-  private openai: OpenAI;
+export class GenerationService implements OnModuleInit {
 
   constructor(
     private prisma: PrismaService,
     private config: ConfigService,
-  ) {
-    this.openai = new OpenAI({ apiKey: this.config.get('OPENAI_API_KEY') });
+  ) {}
+
+  onModuleInit() {
+    initAgents(this.config.get('OPENAI_API_KEY'));
   }
 
-  async generate(userId: string, type: keyof typeof PROMPTS, dto: GenerateDto) {
-    // Check quota for free users
+  private async getUserContext(userId: string, dto: GenerateDto): Promise<GenerationContext> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: { subscription: true },
     });
 
-    if (user.subscription?.plan === 'FREE') {
-      const currentMonth = new Date();
-      currentMonth.setDate(1); currentMonth.setHours(0, 0, 0, 0);
-      const count = await this.prisma.generation.count({
-        where: { userId, createdAt: { gte: currentMonth } },
-      });
-      if (count >= FREE_LIMIT)
-        throw new ForbiddenException('Monthly limit reached. Upgrade to Pro for unlimited generations.');
+    const plan = (user?.subscription?.plan ?? 'FREE') as UserPlan;
+
+    return {
+      userId,
+      plan,
+      language: (dto.language ?? 'en') as SupportedLanguage,
+      platform: (dto.platform ?? 'OnlyFans') as Platform,
+      niche: dto.niche ?? '',
+      tone: dto.tone ?? 'Flirty',
+      nsfwLevel: (dto.nsfwLevel ?? 2) as NsfwLevel,
+      creatorName: user?.name ?? undefined,
+    };
+  }
+
+  private async checkQuota(userId: string, plan: string): Promise<void> {
+    if (plan !== 'FREE') return;
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+    const count = await this.prisma.generation.count({
+      where: { userId, createdAt: { gte: startOfMonth } },
+    });
+    if (count >= FREE_LIMIT) {
+      throw new ForbiddenException('Monthly limit reached. Upgrade to Pro for unlimited generations.');
     }
+  }
 
-    const prompt = PROMPTS[type](dto);
-    const completion = await this.openai.chat.completions.create({
-      model: this.config.get('OPENAI_MODEL', 'gpt-4o-mini'),
-      messages: [{ role: 'user', content: prompt }],
-      max_tokens: 500,
+  private async saveGeneration(userId: string, type: string, prompt: string, result: any) {
+    return this.prisma.generation.create({
+      data: {
+        userId,
+        type: type as any,
+        prompt,
+        result: JSON.stringify(result),
+        tokens: 0,
+      },
     });
+  }
 
-    const result = completion.choices[0].message.content;
-    const tokens = completion.usage?.total_tokens || 0;
+  async generateCaption(userId: string, dto: GenerateDto) {
+    const ctx = await this.getUserContext(userId, dto);
+    await this.checkQuota(userId, ctx.plan);
+    const output = await runCaptionAgent(ctx, dto.context);
+    await this.saveGeneration(userId, 'CAPTION', dto.context, output);
+    return output;
+  }
 
-    const generation = await this.prisma.generation.create({
-      data: { userId, type, prompt: dto.context, result, tokens },
-    });
+  async generateBio(userId: string, dto: GenerateDto) {
+    const ctx = await this.getUserContext(userId, dto);
+    await this.checkQuota(userId, ctx.plan);
+    const output = await runBioAgent(ctx, dto.context);
+    await this.saveGeneration(userId, 'BIO', dto.context, output);
+    return output;
+  }
 
-    return { result, generationId: generation.id, tokensUsed: tokens };
+  async generateDMScript(userId: string, dto: GenerateDto) {
+    const ctx = await this.getUserContext(userId, dto);
+    await this.checkQuota(userId, ctx.plan);
+    const output = await runDMScriptAgent(ctx, dto.context);
+    await this.saveGeneration(userId, 'DM_SCRIPT', dto.context, output);
+    return output;
+  }
+
+  async generateContentIdeas(userId: string, dto: GenerateDto) {
+    const ctx = await this.getUserContext(userId, dto);
+    await this.checkQuota(userId, ctx.plan);
+    const output = await runContentIdeasAgent(ctx, dto.context);
+    await this.saveGeneration(userId, 'CONTENT_IDEAS', dto.context, output);
+    return output;
+  }
+
+  async generateHashtags(userId: string, dto: GenerateDto) {
+    const ctx = await this.getUserContext(userId, dto);
+    await this.checkQuota(userId, ctx.plan);
+    const output = await runHashtagAgent(ctx, dto.context);
+    await this.saveGeneration(userId, 'HASHTAGS', dto.context, output);
+    return output;
   }
 
   async getHistory(userId: string) {
-    return this.prisma.generation.findMany({
+    const items = await this.prisma.generation.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
       take: 50,
+    });
+    return items.map(item => ({
+      ...item,
+      result: (() => { try { return JSON.parse(item.result); } catch { return item.result; } })(),
+    }));
+  }
+
+  async getMonthlyUsage(userId: string): Promise<number> {
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+    return this.prisma.generation.count({
+      where: { userId, createdAt: { gte: startOfMonth } },
     });
   }
 }
