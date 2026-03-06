@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { SUPPORTED_LANGUAGES, LangCode, saveLangToStorage } from '@/lib/i18n'
 import { useLang } from '@/lib/LanguageContext'
+import { useAuth, PLAN_LIMITS } from '@/lib/AuthContext'
 
 type GenType = 'caption' | 'bio' | 'dm-script' | 'content-ideas' | 'hashtags'
 
@@ -150,6 +151,7 @@ function HashtagsResult({ data, onCopy, t }: { data: any; onCopy: (text: string)
 
 export default function DashboardPage() {
   const { lang, setLang, t } = useLang()
+  const { user, loading: authLoading, logout } = useAuth()
   const [activeTool, setActiveTool] = useState<GenType>('caption')
   const [context, setContext] = useState('')
   const [niche, setNiche] = useState('')
@@ -179,11 +181,12 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const token = localStorage.getItem('token')
-    if (!token) { router.push('/login'); return }
+    if (!authLoading && !token) { router.push('/login'); return }
+    if (!token) return
     fetch(`${process.env.NEXT_PUBLIC_API_URL}/generate/usage`, {
       headers: { Authorization: `Bearer ${token}` }
     }).then(r => r.json()).then(d => setUsage(d.count)).catch(() => {})
-  }, [])
+  }, [authLoading])
 
   const handleSetLang = (code: LangCode) => {
     setLang(code)
@@ -217,9 +220,12 @@ export default function DashboardPage() {
     setTimeout(() => setCopied(false), 2000)
   }
 
-  const FREE_LIMIT = 10
-  const usagePercent = Math.min((usage / FREE_LIMIT) * 100, 100)
+  const plan = user?.plan ?? 'FREE'
+  const planLimit = PLAN_LIMITS[plan]
+  const FREE_LIMIT = planLimit.generations === Infinity ? null : planLimit.generations
+  const usagePercent = FREE_LIMIT ? Math.min((usage / FREE_LIMIT) * 100, 100) : 0
   const nsfwInfo = NSFW_LABELS[nsfwLevel]
+  const isPro = plan === 'PRO' || plan === 'BUSINESS'
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-950 via-purple-950 to-black text-white flex flex-col">
@@ -234,15 +240,27 @@ export default function DashboardPage() {
               <option key={l.code} value={l.code}>{l.flag} {l.name}</option>
             ))}
           </select>
-          {/* Usage */}
-          <div className="flex items-center gap-2 text-xs">
-            <span className="text-gray-400">{Math.min(usage, FREE_LIMIT)}/{FREE_LIMIT} {t('nav.free')}</span>
-            <div className="w-16 h-1.5 bg-white/10 rounded-full overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-pink-500 to-purple-500 rounded-full transition-all" style={{ width: `${usagePercent}%` }} />
+          {/* Plan badge */}
+          {isPro && (
+            <span className="text-xs font-semibold bg-gradient-to-r from-pink-500 to-purple-600 px-2.5 py-1 rounded-full">
+              {planLimit.label}
+            </span>
+          )}
+
+          {/* Usage — free only */}
+          {!isPro && FREE_LIMIT && (
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-gray-400">{Math.min(usage, FREE_LIMIT)}/{FREE_LIMIT} {t('nav.free')}</span>
+              <div className="w-16 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-pink-500 to-purple-500 rounded-full transition-all" style={{ width: `${usagePercent}%` }} />
+              </div>
             </div>
-          </div>
-          <button onClick={() => { localStorage.removeItem('token'); router.push('/') }}
-            className="text-gray-500 hover:text-white transition text-xs">{t('nav.logout')}</button>
+          )}
+
+          {/* User name */}
+          {user?.name && <span className="text-gray-500 text-xs hidden sm:block">{user.name}</span>}
+
+          <button onClick={logout} className="text-gray-500 hover:text-white transition text-xs">{t('nav.logout')}</button>
         </div>
       </nav>
 
@@ -262,7 +280,7 @@ export default function DashboardPage() {
               </div>
             </button>
           ))}
-          {usage >= 8 && (
+          {!isPro && usage >= 8 && (
             <div className="mt-3 bg-pink-500/10 border border-pink-500/20 rounded-xl p-3">
               <p className="text-xs text-pink-300 font-medium mb-1">{t('sidebar.runningLow')}</p>
               <p className="text-xs text-gray-500 mb-2">{t('sidebar.upgradeDesc')}</p>
