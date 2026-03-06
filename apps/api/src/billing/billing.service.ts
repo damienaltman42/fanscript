@@ -56,7 +56,7 @@ export class BillingService {
 
     switch (event.type) {
       case 'checkout.session.completed': {
-        const session = event.data.object as Stripe.CheckoutSession;
+        const session = event.data.object as any;
         const { userId, plan } = session.metadata;
         await this.prisma.subscription.update({
           where: { userId },

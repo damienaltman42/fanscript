@@ -7,7 +7,7 @@ async function bootstrap() {
   app.enableCors({ origin: process.env.APP_URL || 'http://localhost:3000' });
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   app.setGlobalPrefix('api');
-  await app.listen(3001);
-  console.log('🚀 FanScript API running on http://localhost:3001');
+  await app.listen(3002);
+  console.log('🚀 FanScript API running on http://localhost:3002');
 }
 bootstrap();

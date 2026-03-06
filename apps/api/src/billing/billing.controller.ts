@@ -8,7 +8,7 @@ export class BillingController {
 
   @UseGuards(JwtAuthGuard)
   @Post('checkout')
-  createCheckout(@Body('plan') plan: string, @Request() req) {
+  createCheckout(@Body('plan') plan: 'PRO' | 'BUSINESS', @Request() req) {
     return this.billingService.createCheckoutSession(req.user.id, plan);
   }
 
