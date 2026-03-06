@@ -1,0 +1,78 @@
+export default {
+  nav: { logout: 'Cerrar sesión', upgrade: 'Mejorar plan', free: 'gratis' },
+  tools: {
+    caption: { label: 'Descripción', desc: 'Captions seductoras' },
+    bio: { label: 'Bio', desc: 'Bios que convierten' },
+    dmScript: { label: 'Script DM', desc: 'Convierte seguidores en fans' },
+    ideas: { label: 'Ideas', desc: 'Nunca te quedes sin inspiración' },
+    hashtags: { label: 'Hashtags', desc: 'Tags optimizados por plataforma' },
+  },
+  controls: {
+    tone: 'Tono', platform: 'Plataforma', intensity: 'Intensidad del contenido',
+    niche: 'Tu nicho (opcional) — ej: fitness, cosplay, lencería...',
+    suggestive: 'Sugestivo', sensual: 'Sensual', explicit: 'Explícito',
+    veryExplicit: 'Muy explícito', noLimits: '🔥 Sin límites',
+  },
+  generate: { button: 'Generar', generating: 'Generando...', regenerate: '🔄 Regenerar' },
+  placeholders: {
+    caption: 'Describe tu post... ej: "Selfie en espejo con nuevo bodysuit de encaje rojo, viernes por la noche..."',
+    bio: 'Descríbete... ej: "Creadora fitness, 24 años, yoga y café, 5K seguidores"',
+    dmScript: 'Describe la situación... ej: "Nuevo seguidor que dio like a 3 de mis posts"',
+    ideas: 'Describe tu situación... ej: "Nicho lencería + fitness, 3K suscriptores"',
+    hashtags: 'Describe tu contenido... ej: "Creadora lencería + fitness en Twitter y OF"',
+  },
+  result: {
+    title: '✨ Resultado', variation: 'Variación', copy: 'Copiar', copyAll: 'Copiar todo',
+    copied: '✓ ¡Copiado!', proTips: '💡 Consejos Pro', scenario: 'Escenario',
+    conversionTip: 'Consejo de conversión', error: 'Error de generación',
+    limitReached: 'Límite mensual alcanzado. Mejora a Pro para generaciones ilimitadas.',
+    upgradeLink: 'Mejorar a Pro →',
+  },
+  sidebar: {
+    tools: 'Herramientas', runningLow: '⚡ Cuota casi agotada',
+    upgradeDesc: 'Mejora para generaciones ilimitadas', upgradeBtn: 'Mejorar →',
+  },
+  auth: {
+    login: {
+      title: 'Bienvenida de vuelta 👋', subtitle: 'Inicia sesión para continuar',
+      email: 'Dirección de email', password: 'Contraseña', submit: 'Iniciar sesión',
+      submitting: 'Iniciando sesión...', noAccount: '¿No tienes cuenta?', register: 'Regístrate gratis',
+    },
+    register: {
+      title: 'Empieza a escribir mejor ✨', subtitle: '10 generaciones gratis al mes — sin tarjeta de crédito',
+      name: 'Tu nombre de creadora', email: 'Dirección de email', password: 'Contraseña (8+ caracteres)',
+      submit: 'Crear mi cuenta →', submitting: 'Creando cuenta...',
+      hasAccount: '¿Ya tienes cuenta?', login: 'Iniciar sesión',
+      privacy: '🔒 Tus datos son privados y seguros. Sin spam.',
+    },
+  },
+  landing: {
+    nav: { pricing: 'Precios', login: 'Iniciar sesión', startFree: 'Empezar gratis' },
+    badge: 'Impulsado por IA para creadoras adultas',
+    title1: 'Escribe menos.', title2: 'Gana más.',
+    subtitle: 'Genera descripciones perfectas, bios irresistibles y scripts DM de alta conversión para tu OnlyFans y Fansly — en segundos.',
+    cta1: 'Empezar gratis →', cta2: 'Ver precios',
+    stats: { creators: 'Creadoras activas', generated: 'Descripciones generadas', rating: 'Valoración media' },
+    demo: { label: 'Vista previa en vivo — Generador de descripciones', input: 'Tu entrada', aiGenerated: '✨ Generado por IA' },
+    features: { title: 'Todo lo que necesitas', subtitle: '5 herramientas IA diseñadas para creadoras adultas' },
+    featureList: {
+      caption: { title: 'Descripciones', desc: 'Captions sensuales y atractivas que impulsan suscripciones.' },
+      bio: { title: 'Bio de perfil', desc: 'Bios irresistibles que convierten visitantes en suscriptores.' },
+      dm: { title: 'Scripts DM', desc: 'Mensajes personalizados para convertir seguidores en fans de pago.' },
+      ideas: { title: 'Ideas de contenido', desc: 'Ideas frescas cada día. Nunca más bloqueo creativo.' },
+      hashtags: { title: 'Hashtags', desc: 'Hashtags optimizados para maximizar tu alcance.' },
+    },
+    cta3: { title: '¿Lista para empezar?', desc: '10 generaciones gratis al mes. Sin tarjeta de crédito.', btn: 'Crear cuenta gratis' },
+    testimonials: { title: 'Las creadoras adoran FanScript' },
+    bottomCta: { title: 'Deja de perder tiempo escribiendo.', subtitle: 'Únete a 2.400+ creadoras que escriben más rápido y ganan más.', btn: 'Empezar gratis — Sin tarjeta' },
+    footer: { rights: '© 2026 FanScript', pricing: 'Precios', contact: 'Contacto' },
+  },
+  pricing: {
+    title: 'Precios simples', subtitle: 'Empieza gratis. Mejora cuando estés lista.',
+    plans: {
+      free: { name: 'Gratis', price: '0€', period: 'para siempre', features: ['10 generaciones/mes', 'Todas las herramientas', 'Copiar al portapapeles'], cta: 'Empezar' },
+      pro: { name: 'Pro', price: '19€', period: '/mes', popular: '⭐ El más popular', features: ['Generaciones ilimitadas', 'Todas las herramientas', 'Modelo GPT-4o', 'Historial (50)'], cta: 'Ir a Pro' },
+      business: { name: 'Business', price: '49€', period: '/mes', features: ['Todo de Pro', 'Modelo GPT-4.1', 'Acceso API', 'Soporte prioritario'], cta: 'Ir a Business' },
+    },
+  },
+} as const;
